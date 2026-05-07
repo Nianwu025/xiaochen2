@@ -1,0 +1,1909 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小琛智能体 — 数据流动全景</title>
+<style>
+/* ========== CSS Variables ========== */
+:root {
+  --bg: #0a0a1a;
+  --bg-card: rgba(255,255,255,0.04);
+  --bg-card-hover: rgba(255,255,255,0.08);
+  --border: rgba(255,255,255,0.08);
+  --text: #e0e0e0;
+  --text-dim: #888;
+  --text-bright: #fff;
+  --cyan: #00f0ff;
+  --amber: #f59e0b;
+  --purple: #a855f7;
+  --red: #ef4444;
+  --teal: #14b8a6;
+  --pink: #ec4899;
+  --green: #22c55e;
+  --nav-bg: rgba(10,10,26,0.85);
+  --glass-blur: 16px;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+/* ========== Reset & Base ========== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 70px; }
+body {
+  font-family: -apple-system, "SF Pro SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* ========== Fixed Nav ========== */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: var(--nav-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex; align-items: center; height: 56px;
+  gap: 8px;
+}
+nav .nav-title {
+  font-size: 14px; font-weight: 700; color: var(--text-bright);
+  margin-right: 24px; white-space: nowrap;
+}
+nav a {
+  font-size: 13px; color: var(--text-dim); text-decoration: none;
+  padding: 6px 14px; border-radius: 20px;
+  transition: all 0.3s; white-space: nowrap;
+}
+nav a:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+nav a.active { color: var(--cyan); background: rgba(0,240,255,0.1); }
+
+/* ========== Sections ========== */
+section {
+  max-width: 900px; margin: 0 auto;
+  padding: 100px 24px 60px;
+}
+.section-title {
+  font-size: 28px; font-weight: 800; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 12px;
+}
+.section-title .badge {
+  font-size: 11px; padding: 3px 10px; border-radius: 12px;
+  font-weight: 600; letter-spacing: 0.5px;
+}
+.section-desc {
+  font-size: 14px; color: var(--text-dim); margin-bottom: 40px;
+}
+
+/* Pipeline color themes */
+.passive-theme .section-title { color: var(--cyan); }
+.passive-theme .badge { background: rgba(0,240,255,0.15); color: var(--cyan); }
+.passive-theme .step-card { border-color: rgba(0,240,255,0.15); }
+.passive-theme .step-card.active { border-color: rgba(0,240,255,0.4); box-shadow: 0 0 30px rgba(0,240,255,0.1); }
+.passive-theme .step-num { background: rgba(0,240,255,0.15); color: var(--cyan); }
+.passive-theme .next-btn { color: var(--cyan); border-color: rgba(0,240,255,0.3); }
+.passive-theme .next-btn:hover { background: rgba(0,240,255,0.1); }
+.passive-theme .particle { background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+
+.proactive-theme .section-title { color: var(--amber); }
+.proactive-theme .badge { background: rgba(245,158,11,0.15); color: var(--amber); }
+.proactive-theme .step-card { border-color: rgba(245,158,11,0.15); }
+.proactive-theme .step-card.active { border-color: rgba(245,158,11,0.4); box-shadow: 0 0 30px rgba(245,158,11,0.1); }
+.proactive-theme .step-num { background: rgba(245,158,11,0.15); color: var(--amber); }
+.proactive-theme .next-btn { color: var(--amber); border-color: rgba(245,158,11,0.3); }
+.proactive-theme .next-btn:hover { background: rgba(245,158,11,0.1); }
+.proactive-theme .particle { background: var(--amber); box-shadow: 0 0 12px var(--amber); }
+
+.drift-theme .section-title { color: var(--purple); }
+.drift-theme .badge { background: rgba(168,85,247,0.15); color: var(--purple); }
+.drift-theme .step-card { border-color: rgba(168,85,247,0.15); }
+.drift-theme .step-card.active { border-color: rgba(168,85,247,0.4); box-shadow: 0 0 30px rgba(168,85,247,0.1); }
+.drift-theme .step-num { background: rgba(168,85,247,0.15); color: var(--purple); }
+.drift-theme .next-btn { color: var(--purple); border-color: rgba(168,85,247,0.3); }
+.drift-theme .next-btn:hover { background: rgba(168,85,247,0.1); }
+.drift-theme .particle { background: var(--purple); box-shadow: 0 0 12px var(--purple); }
+
+/* ========== Step Card ========== */
+.steps-container { position: relative; }
+.step-wrapper {
+  position: relative;
+  margin-bottom: 16px;
+}
+.step-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  backdrop-filter: blur(8px);
+  transition: all 0.4s ease;
+  cursor: default;
+  opacity: 0.35;
+  transform: scale(0.97);
+}
+.step-card.active {
+  opacity: 1;
+  transform: scale(1);
+  background: var(--bg-card-hover);
+}
+.step-card.done {
+  opacity: 0.6;
+  transform: scale(0.98);
+}
+.step-card.done:hover {
+  opacity: 0.85;
+  transform: scale(1);
+}
+.step-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px;
+}
+.step-num {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; flex-shrink: 0;
+}
+.step-title {
+  font-size: 18px; font-weight: 700; color: var(--text-bright);
+}
+.step-body {
+  font-size: 13px; color: var(--text); line-height: 1.8;
+  padding-left: 44px;
+}
+.step-body .flow {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 6px; margin: 8px 0;
+}
+.step-body .flow-node {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 4px 10px; border-radius: 6px;
+  font-size: 12px; font-weight: 600; color: var(--text-bright);
+  white-space: nowrap;
+}
+.step-body .flow-arrow {
+  color: var(--text-dim); font-size: 14px;
+}
+.step-body .detail {
+  margin-top: 12px; padding: 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid rgba(255,255,255,0.1);
+}
+.step-body .detail-title {
+  font-size: 11px; font-weight: 700; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
+}
+.step-body .detail ul {
+  list-style: none; padding: 0;
+}
+.step-body .detail li {
+  font-size: 12px; color: var(--text-dim);
+  padding: 3px 0; padding-left: 16px; position: relative;
+}
+.step-body .detail li::before {
+  content: ''; position: absolute; left: 0; top: 10px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+}
+.step-body code {
+  background: rgba(255,255,255,0.08);
+  padding: 2px 6px; border-radius: 4px;
+  font-size: 11px; font-family: "SF Mono", "Fira Code", monospace;
+  color: var(--text-bright);
+}
+
+/* Next button */
+.next-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 16px; padding: 8px 20px;
+  background: transparent; border: 1px solid;
+  border-radius: 20px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.3s;
+  font-family: inherit;
+}
+.next-btn:hover { transform: translateX(4px); }
+
+/* Connector line between steps */
+.step-wrapper::before {
+  content: '';
+  position: absolute;
+  left: 39px; top: 100%; width: 2px; height: 16px;
+  background: rgba(255,255,255,0.06);
+}
+.step-wrapper:last-child::before { display: none; }
+
+/* ========== Particle Animation ========== */
+.particle-track {
+  position: relative;
+  height: 4px;
+  margin: 8px 0 8px 44px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.particle {
+  position: absolute;
+  width: 24px; height: 4px;
+  border-radius: 2px;
+  animation: particle-flow 1.5s ease-in-out infinite;
+}
+@keyframes particle-flow {
+  0% { left: -24px; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+
+/* ========== Overview Section ========== */
+.overview-section {
+  text-align: center;
+  padding-top: 120px;
+}
+.overview-section .section-title {
+  justify-content: center;
+  font-size: 32px;
+  color: var(--text-bright);
+}
+.tech-stack {
+  display: flex; justify-content: center; flex-wrap: wrap;
+  gap: 8px; margin: 24px 0 48px;
+}
+.tech-tag {
+  font-size: 11px; padding: 4px 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px; color: var(--text-dim);
+  font-weight: 500;
+}
+
+/* Architecture layers */
+.arch-layers {
+  display: flex; flex-direction: column;
+  gap: 8px; max-width: 600px; margin: 0 auto 48px;
+}
+.arch-layer {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s;
+}
+.arch-layer:hover {
+  background: var(--bg-card-hover);
+}
+.arch-layer .layer-idx {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+  background: rgba(255,255,255,0.06); color: var(--text-dim);
+}
+.arch-layer .layer-name {
+  font-size: 14px; font-weight: 600; color: var(--text-bright);
+  min-width: 100px;
+}
+.arch-layer .layer-desc {
+  font-size: 12px; color: var(--text-dim);
+}
+.arch-arrow {
+  text-align: center; color: rgba(255,255,255,0.15);
+  font-size: 12px; margin: -2px 0;
+}
+
+.start-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 32px;
+  background: transparent;
+  border: 1px solid rgba(0,240,255,0.3);
+  border-radius: 24px;
+  color: var(--cyan); font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: all 0.3s;
+  font-family: inherit;
+}
+.start-btn:hover {
+  background: rgba(0,240,255,0.1);
+  box-shadow: 0 0 30px rgba(0,240,255,0.15);
+  transform: translateY(-2px);
+}
+
+/* ========== Infrastructure Section ========== */
+.infra-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.infra-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  backdrop-filter: blur(8px);
+}
+.infra-card .card-title {
+  font-size: 14px; font-weight: 700; color: var(--text-bright);
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.infra-card .card-title .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.infra-card .card-body {
+  font-size: 12px; color: var(--text-dim); line-height: 1.8;
+}
+.infra-card .layer-stack {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.infra-card .layer-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+  font-size: 11px;
+}
+.infra-card .layer-item .l-name {
+  font-weight: 600; color: var(--text); min-width: 80px;
+}
+.infra-card .layer-item .l-desc {
+  color: var(--text-dim);
+}
+.tool-tag {
+  display: inline-block;
+  font-size: 10px; padding: 3px 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 4px; margin: 2px;
+  color: var(--text-dim);
+}
+
+/* ========== Decision point highlight ========== */
+.decision-point {
+  border: 1px dashed rgba(168,85,247,0.4) !important;
+  background: rgba(168,85,247,0.05) !important;
+}
+.decision-point .step-title::after {
+  content: '自主决策';
+  font-size: 10px; padding: 2px 8px;
+  background: rgba(168,85,247,0.2);
+  color: var(--purple);
+  border-radius: 10px; margin-left: 8px;
+  font-weight: 600;
+}
+
+/* Path split visualization */
+.path-split {
+  display: flex; gap: 12px; margin-top: 12px;
+}
+.path-option {
+  flex: 1; padding: 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-sm);
+}
+.path-option .path-label {
+  font-size: 11px; font-weight: 700; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+}
+.path-option .path-flow {
+  font-size: 12px; color: var(--text);
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+  nav { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  nav .nav-title { display: none; }
+  section { padding: 80px 16px 40px; }
+  .section-title { font-size: 22px; }
+  .step-body { padding-left: 0; }
+  .infra-grid { grid-template-columns: 1fr; }
+  .path-split { flex-direction: column; }
+  .arch-layer { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .overview-section .section-title { font-size: 24px; }
+}
+
+/* ========== Level Toggle ========== */
+.level-toggle {
+  display: flex; align-items: center; gap: 4px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 20px; padding: 3px;
+  border: 1px solid var(--border);
+}
+.level-toggle button {
+  font-size: 12px; padding: 5px 14px;
+  background: transparent; border: none; border-radius: 16px;
+  color: var(--text-dim); cursor: pointer;
+  transition: all 0.3s; font-family: inherit; font-weight: 500;
+}
+.level-toggle button.active {
+  background: rgba(0,240,255,0.15); color: var(--cyan);
+}
+
+/* Level content — hidden by default, JS shows the active one */
+.level-simple, .level-current, .level-tech { display: none; }
+
+/* ========== Scroll reveal animation ========== */
+.step-card {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+</style>
+</head>
+<body>
+
+<!-- ========== Navigation ========== -->
+<nav>
+  <span class="nav-title">小琛架构</span>
+  <a href="#overview" class="active">系统概览</a>
+  <a href="#passive">被动回复</a>
+  <a href="#proactive">主动获取</a>
+  <a href="#drift">Drift漂移</a>
+  <a href="#infra">基础设施</a>
+  <div style="margin-left:auto;" class="level-toggle">
+    <button onclick="setLevel('simple')" data-level="simple">简单</button>
+    <button onclick="setLevel('current')" data-level="current" class="active">标准</button>
+    <button onclick="setLevel('tech')" data-level="tech">技术</button>
+  </div>
+</nav>
+
+<!-- ========== Section 0: Overview ========== -->
+<section id="overview" class="overview-section">
+  <h1 class="section-title">数据流动全景</h1>
+  <p class="section-desc">点击每一步，追踪数据在七层架构中的完整流转路径 · 右上角切换 简单/标准/技术 三种深度</p>
+
+  <div class="tech-stack">
+    <span class="tech-tag">Python 3.11</span>
+    <span class="tech-tag">asyncio</span>
+    <span class="tech-tag">SQLite + sqlite-vec</span>
+    <span class="tech-tag">MCP 协议</span>
+    <span class="tech-tag">DeepSeek-V4-Flash</span>
+    <span class="tech-tag">Qwen-Flash</span>
+    <span class="tech-tag">Qwen-VL-Plus</span>
+    <span class="tech-tag">飞书 WebSocket</span>
+    <span class="tech-tag">text-embedding-v3</span>
+  </div>
+
+  <div class="arch-layers">
+    <div class="arch-layer">
+      <span class="layer-idx">1</span>
+      <span class="layer-name">通道层</span>
+      <span class="layer-desc">飞书 / CLI / IPC — IM协议适配，统一 InboundMessage/OutboundMessage</span>
+    </div>
+    <div class="arch-arrow">▼</div>
+    <div class="arch-layer">
+      <span class="layer-idx">2</span>
+      <span class="layer-name">事件总线</span>
+      <span class="layer-desc">EventBus — emit/observe/fanout/enqueue 四种调度，8种生命周期事件</span>
+    </div>
+    <div class="arch-arrow">▼</div>
+    <div class="arch-layer">
+      <span class="layer-idx">3</span>
+      <span class="layer-name">三条流水线</span>
+      <span class="layer-desc">被动回复 / 主动获取 / Drift漂移 — 三种并行行为模式</span>
+    </div>
+    <div class="arch-arrow">▼</div>
+    <div class="arch-layer">
+      <span class="layer-idx">4</span>
+      <span class="layer-name">核心引擎</span>
+      <span class="layer-desc">AgentLoop → CoreRunner → AgentCore → Reasoner — 编排与tool loop</span>
+    </div>
+    <div class="arch-arrow">▼</div>
+    <div class="arch-layer">
+      <span class="layer-idx">5</span>
+      <span class="layer-name">记忆层</span>
+      <span class="layer-desc">6层记忆架构 — L1硬编码 → L6元记忆，HyDE增强向量检索</span>
+    </div>
+    <div class="arch-arrow">▼</div>
+    <div class="arch-layer">
+      <span class="layer-idx">6</span>
+      <span class="layer-name">工具层</span>
+      <span class="layer-desc">always_on + deferred + MCP动态挂载 — 懒加载 + tool_search</span>
+    </div>
+    <div class="arch-arrow">▼</div>
+    <div class="arch-layer">
+      <span class="layer-idx">7</span>
+      <span class="layer-name">模型层</span>
+      <span class="layer-desc">DeepSeek主推理 + Qwen轻量 + Qwen-VL视觉 + embedding向量</span>
+    </div>
+  </div>
+
+  <button class="start-btn" onclick="document.getElementById('passive').scrollIntoView({behavior:'smooth'})">
+    从这里开始探索 ↓
+  </button>
+</section>
+
+<!-- ========== Section 1: Passive Pipeline ========== -->
+<section id="passive" class="passive-theme">
+  <h2 class="section-title">
+    被动回复流水线
+    <span class="badge">用户消息 → 小琛回复</span>
+  </h2>
+  <p class="section-desc">你发一条飞书消息，小琛内部如何运转到给出回复</p>
+
+  <div class="steps-container" data-pipeline="passive">
+
+    <div class="step-wrapper">
+      <div class="step-card active" data-step="1">
+        <div class="step-header">
+          <span class="step-num">1</span>
+          <span class="step-title">消息到达</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>你在飞书上发了一条消息，就像寄出一封信。这封信到达小琛的"收发室"（飞书通道），被拆开、登记，然后放进内部的传送带上。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">飞书 WebSocket</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">子线程接收</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">asyncio.run_coroutine_threadsafe</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">InboundMessage</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">技术细节</div>
+              <ul>
+                <li><code>FeishuChannel._on_message</code> 在 lark-oapi 的子线程中触发</li>
+                <li>通过 <code>asyncio.run_coroutine_threadsafe</code> 桥接到主事件循环</li>
+                <li>消息被封装为 <code>InboundMessage(chat_id, text, images)</code> 数据类</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">飞书 WebSocket</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">子线程接收</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">asyncio.run_coroutine_threadsafe</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">InboundMessage</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">代码路径</div>
+              <ul>
+                <li><code>infra/channels/feishu_channel.py</code> — <code>FeishuChannel._on_message()</code> 在 lark-oapi SDK 的 WebSocket 回调线程中触发</li>
+                <li>跨线程桥接：<code>asyncio.run_coroutine_threadsafe(self._bus.publish_inbound(msg), self._loop)</code></li>
+                <li><code>InboundMessage</code> dataclass：<code>chat_id: str</code>, <code>text: str</code>, <code>images: list[str]</code>, <code>reply_to: str | None</code></li>
+                <li>飞书 WebSocket 使用长连接 + 看门狗重连机制</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="2">
+        <div class="step-header">
+          <span class="step-num">2</span>
+          <span class="step-title">事件分发</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>信到了分拣中心。分拣员（EventBus）看了一眼地址，把它分到"用户来信"这条流水线上，然后通知处理员（CoreRunner）开始工作。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">EventBus.emit(TurnStarted)</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">CoreRunner.process()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">路由分流</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">技术细节</div>
+              <ul>
+                <li>EventBus 的 <code>emit</code> 模式：顺序拦截链，handler 可修改事件</li>
+                <li>CoreRunner 判断消息类型：内部事件 vs 普通用户消息</li>
+                <li>普通消息进入 <code>AgentCore.process()</code> 主编排流程</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">EventBus.emit(TurnStarted)</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">CoreRunner.process()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">路由分流</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">代码路径</div>
+              <ul>
+                <li><code>bus/event_bus.py</code> — <code>emit()</code> 顺序拦截链，每个 handler 可修改或拦截事件</li>
+                <li>8种生命周期事件：<code>TurnStarted</code>, <code>BeforeReasoning</code>, <code>BeforeDispatch</code>, <code>ToolCallStarted</code>, <code>ToolCallCompleted</code>, <code>StreamDeltaReady</code>, <code>TurnCompleted</code>, <code>TurnCommitted</code></li>
+                <li><code>agent/core/runner.py</code> — <code>CoreRunner.process()</code> 分流：内部事件走 <code>_handle_internal()</code>，普通消息走 <code>AgentCore.process()</code></li>
+                <li>四种调度模式：<code>emit</code>(拦截链) / <code>observe</code>(fire-and-forget) / <code>fanout</code>(并发广播) / <code>enqueue</code>(后台队列)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="3">
+        <div class="step-header">
+          <span class="step-num">3</span>
+          <span class="step-title">上下文构建</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>处理员开始准备：先翻看最近的聊天记录（你们之前聊了什么），再去记忆库搜搜有没有相关记忆（比如你之前说过喜欢什么），最后看一下小琛的"性格说明书"（固定的行为规则）。三件事同时做。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">ContextStore.prepare()</span>
+            </div>
+            <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">
+              <span class="flow-node" style="border-color:rgba(0,240,255,0.3);">sessions.db 历史</span>
+              <span class="flow-node" style="border-color:rgba(20,184,166,0.3);">memory2.db 向量检索<br><small style="color:var(--text-dim)">HyDE增强 + 关键词混合</small></span>
+              <span class="flow-node" style="border-color:rgba(239,68,68,0.3);">persona.py 硬规则</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">三路并行</div>
+              <ul>
+                <li><code>sessions.db</code> — 最近N轮对话直接注入</li>
+                <li><code>memory2.db</code> — QueryRewriter改写 → HyDE假设文档 → sqlite-vec KNN + keyword_match → SufficiencyChecker → 1200字预算注入</li>
+                <li><code>persona.py</code> — AKASHIC_IDENTITY + PERSONALITY_RULES（每轮必注入，不可热加载）</li>
+                <li>同时注入 SELF.md（自我认知）+ MEMORY.md（长期记忆）</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">ContextStore.prepare()</span>
+            </div>
+            <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">
+              <span class="flow-node" style="border-color:rgba(0,240,255,0.3);">sessions.db 历史</span>
+              <span class="flow-node" style="border-color:rgba(20,184,166,0.3);">memory2.db 向量检索</span>
+              <span class="flow-node" style="border-color:rgba(239,68,68,0.3);">persona.py 硬规则</span>
+              <span class="flow-node" style="border-color:rgba(168,85,247,0.3);">SELF.md + MEMORY.md</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">记忆检索管线（5步）</div>
+              <ul>
+                <li><code>memory2/retriever.py</code> — <code>QueryRewriter</code>：轻量LLM判断是否需要检索 + 改写查询</li>
+                <li><code>HyDE 增强</code>：生成假设文档做语义检索（比原始query更准）</li>
+                <li><code>sqlite-vec KNN</code> + <code>keyword_match</code>：向量+关键词混合检索，<code>score_threshold=0.45</code></li>
+                <li><code>SufficiencyChecker</code>：LLM判断检索结果是否足够</li>
+                <li><code>MemoryRetrievalFinalizer</code>：按字符预算(<code>inject_max_chars=1200</code>)排优先级注入，<code>top_k=8</code></li>
+                <li><code>agent/persona.py</code> — <code>AKASHIC_IDENTITY</code> + <code>PERSONALITY_RULES</code> 硬编码，每轮必注入，改代码+重启才生效</li>
+                <li>已知短板：硬规则会被session history稀释（"石头"出现6次 vs 硬规则1次 = 3:1污染）</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="4">
+        <div class="step-header">
+          <span class="step-num">4</span>
+          <span class="step-title">LLM 推理</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>资料齐了，现在轮到"大脑"出场。小琛把所有材料交给AI专家（DeepSeek），专家一边思考一边可能需要查资料（调用工具），比如上网搜个东西、再翻翻记忆库。最多可以反复查40次，直到想清楚怎么回答。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">Reasoner.run_turn()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">DeepSeek-V4-Flash</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">tool loop (max 40轮)</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">可能调用的工具</div>
+              <ul>
+                <li><code>web_fetch</code> / <code>web_search</code> — 获取外部信息</li>
+                <li><code>read_image_vision</code> → Qwen-VL-Plus — 图片理解</li>
+                <li><code>recall_memory</code> — 再次检索记忆</li>
+                <li><code>memorize</code> / <code>forget_memory</code> — 主动写入/删除记忆</li>
+                <li>渐进式 Prompt 裁剪：context 超限时自动压缩历史</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">Reasoner.run_turn()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">DeepSeek-V4-Flash</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">tool loop (max 40轮)</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">Reasoner tool loop 机制</div>
+              <ul>
+                <li><code>agent/core/reasoner.py</code> — <code>Reasoner.run_turn()</code> 主循环</li>
+                <li>每轮：发送 messages + tool_schemas → LLM 返回 <code>tool_calls[]</code> 或 <code>content</code></li>
+                <li>tool_calls 逐个执行，结果追加到 messages，继续下一轮</li>
+                <li>渐进式 Prompt 裁剪：context token 超限时自动压缩早期历史</li>
+                <li>图像能力路线B：主模型纯文本 + <code>read_image_vision</code> 工具按需调用 Qwen-VL-Plus</li>
+                <li>常驻工具(always_on)：web_fetch / web_search / recall_memory / memorize / forget_memory / shell / read_image_vision</li>
+                <li>延迟加载工具(deferred)：spawn / schedule / write_file / message_push — 按需注入</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="5">
+        <div class="step-header">
+          <span class="step-num">5</span>
+          <span class="step-title">响应生成</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>专家想好了，写下回答。但有个规矩：每句话都要标注"我是根据哪条记忆说的"（就像论文要标参考文献）。写好后打包，准备寄出去。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">LLM 输出</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">ResponseParser</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">§cited:[]§ 引用标记</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">OutboundMessage</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">引用协议</div>
+              <ul>
+                <li>模型输出强制带 <code>§cited:["memory_id_1","memory_id_2"]§</code> 标记</li>
+                <li>每句话可追溯到记忆来源（L5引用协议层）</li>
+                <li>ResponseParser 提取文本 + 图片路径，封装为 OutboundMessage</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">LLM 输出</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">ResponseParser</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">§cited:[]§ 引用标记</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">OutboundMessage</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">L5 引用协议层</div>
+              <ul>
+                <li>System prompt 中注入引用协议指令，要求模型在每句话后附加 <code>§cited:["mem_id"]§</code></li>
+                <li>ResponseParser 正则提取 cited 标记，关联到 memory2.db 中的具体记录</li>
+                <li>实现可追溯性：每句话都能回答"小琛为什么这么说"</li>
+                <li>OutboundMessage dataclass：<code>chat_id</code>, <code>text</code>, <code>images: list[str]</code>, <code>citations: list[str]</code></li>
+                <li>这是 L5 引用协议层的实现 — 6层记忆架构中的第5层</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="6">
+        <div class="step-header">
+          <span class="step-num">6</span>
+          <span class="step-title">持久化 + 回复</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>回答寄出的同时，小琛做了两件"后台工作"：①把这次对话记到聊天记录本里；②把值得记住的信息提炼成长期记忆存起来（就像你和朋友聊完后，会记住"他喜欢喝美式"这样的信息）。最后，回答通过飞书送到你手上。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">ContextStore.commit()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">写 sessions.db</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">TurnCommitted fanout</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">fanout 三路并发</div>
+              <ul>
+                <li><code>consolidation</code> — 批量延迟：抽取 → 去重(0.70) → supersede检查(0.90) → 写 memory2.db</li>
+                <li><code>memory ingest</code> — 每轮失效检测，轻量LLM判断否定/纠正</li>
+                <li><code>recent_context</code> — 刷新近期上下文缓存</li>
+              </ul>
+            </div>
+            <div class="flow" style="margin-top:12px;">
+              <span class="flow-node">OutboundMessage</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">飞书 API</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">你的飞书聊天窗口</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">ContextStore.commit()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">写 sessions.db</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">TurnCommitted fanout</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">consolidation 流程（批量延迟）</div>
+              <ul>
+                <li><code>memory2/consolidator.py</code> — 异步批量处理，非实时写入</li>
+                <li>Step 1：从对话中抽取记忆候选（轻量LLM）</li>
+                <li>Step 2：content_hash 去重 + 语义去重（<code>merge_threshold=0.70</code>）</li>
+                <li>Step 3：supersede 检查（<code>supersede_threshold=0.90</code>）— 旧记忆标记为 superseded 而非删除（L6元记忆层）</li>
+                <li>Step 4：写入 memory2.db（sqlite-vec 1024维向量）</li>
+                <li><code>memory ingest</code>：每轮轻量LLM检测是否否定了之前的记忆</li>
+                <li>OutboundMessage → <code>infra/channels/feishu_channel.py</code> → <code>send(chat_id, text)</code> → 飞书 HTTP API</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ========== Section 2: Proactive Pipeline ========== -->
+<section id="proactive" class="proactive-theme">
+  <h2 class="section-title">
+    主动获取流水线
+    <span class="badge">小琛主动找你</span>
+  </h2>
+  <p class="section-desc">ProactiveLoop 后台心跳驱动，内容源为空时自动降级到 Drift 模式</p>
+
+  <div class="steps-container" data-pipeline="proactive">
+
+    <div class="step-wrapper">
+      <div class="step-card active" data-step="1">
+        <div class="step-header">
+          <span class="step-num">1</span>
+          <span class="step-title">心跳检测</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>小琛不是一直等着你说话的。他会定期"醒来"看看有没有事要做——就像保安每隔几分钟巡逻一次。你越活跃，他巡逻越勤（最快1分钟一次）；你越安静，他巡逻间隔越长（最慢8分钟一次）。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">ProactiveLoop.run()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">_run_loop()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">AgentTick.tick()</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">自适应间隔 (energy三维评分)</div>
+              <ul>
+                <li><code>D_energy</code>(0.35) — 越久没说话越高</li>
+                <li><code>D_content</code>(0.40) — 新条目越多越高</li>
+                <li><code>D_recent</code>(0.20) — 近期消息越多越高</li>
+                <li>间隔：60s(高活跃) → 120s → 240s → 480s(低活跃)，每级±20%抖动</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">ProactiveLoop.run()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">_run_loop()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">AgentTick.tick()</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">energy.py 三维评分</div>
+              <ul>
+                <li><code>proactive_v2/energy.py</code> — <code>composite_score()</code> 合成三维度</li>
+                <li><code>D_energy = 1 - energy</code>（权重0.35）：越久没说话越高</li>
+                <li><code>D_content</code>（权重0.40）：DataGateway新条目越多越高</li>
+                <li><code>D_recent</code>（权重0.20）：近期消息频率</li>
+                <li><code>proactive_v2/presets.py</code> — "daily"预设：<code>next_tick_from_score()</code> 四档间隔</li>
+                <li>每级 ±20% 随机抖动（<code>tick_jitter=0.2</code>）防止规律性</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="2">
+        <div class="step-header">
+          <span class="step-num">2</span>
+          <span class="step-title">门控检查</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>巡逻之前要过四道门：①有确定的联系地址吗？②你现在忙不忙？③上次联系是不是太近了（1小时内不重复打扰）？④随机概率——不是每次巡逻都会打扰你，有20%~82%的概率决定"这次就算了"。任何一道门没过，就安静退出。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">chat_id 检查</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">busy veto</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">1h冷却</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">AnyAction概率门</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">AnyActionGate 概率公式</div>
+              <ul>
+                <li><code>p = 0.20 + 0.62 × idle_factor × time_factor</code></li>
+                <li><code>idle_factor = 1 - exp(-idle_min / 30)</code> — 空闲30分钟后接近饱和</li>
+                <li>每日上限48次，最小间隔180秒，每天中午12:00重置</li>
+                <li>任何一步失败 → 直接 return None，本轮不触发</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">chat_id 检查</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">busy veto</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">1h冷却</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">AnyAction概率门</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">Pre-gate 检查链 + AnyActionGate</div>
+              <ul>
+                <li><code>proactive_v2/agent_tick.py:261</code> — <code>AgentTick.tick()</code> 入口</li>
+                <li>Pre-gate 链（任何一步失败直接 return None）：</li>
+                <li>① <code>default_chat_id</code> 是否为空</li>
+                <li>② <code>passive_busy_fn</code> → 系统级 veto（被动回复正在处理时禁止主动触达）</li>
+                <li>③ <code>delivery_cooldown</code> → 1小时内是否已发送</li>
+                <li>④ <code>proactive_v2/anyaction.py</code> — <code>AnyActionGate.should_act()</code></li>
+                <li>概率公式：<code>p = 0.20 + (0.82-0.20) × idle_factor × time_factor</code></li>
+                <li>每日上限48次，最小间隔180秒，每天中午12:00重置</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="3">
+        <div class="step-header">
+          <span class="step-num">3</span>
+          <span class="step-title">数据预取</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>巡逻员开始收集信息：看看有没有紧急警报、有没有新内容、有没有相关上下文。三条线同时查。但目前外部信息源还没配，所以三条线都返回"没有新消息"。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">DataGateway.run()</span>
+            </div>
+            <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">
+              <span class="flow-node">_fetch_alerts()</span>
+              <span class="flow-node">_fetch_content()</span>
+              <span class="flow-node">_fetch_context()</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">当前状态</div>
+              <ul>
+                <li><code>proactive_sources.json</code> 内容源配置为空 <code>{"sources": []}</code></li>
+                <li>三路预取均返回空结果</li>
+                <li>但空数据 ≠ 不工作 — 代码有专门的降级路径</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">DataGateway.run()</span>
+            </div>
+            <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">
+              <span class="flow-node">_fetch_alerts()</span>
+              <span class="flow-node">_fetch_content()</span>
+              <span class="flow-node">_fetch_context()</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">DataGateway 三路并行预取</div>
+              <ul>
+                <li><code>proactive_v2/gateway.py</code> — <code>DataGateway.run()</code></li>
+                <li><code>_fetch_alerts()</code> — 实时告警（当前为空）</li>
+                <li><code>_fetch_content()</code> — feed内容（当前为空，<code>proactive_sources.json: {"sources":[]}</code>）</li>
+                <li><code>_fetch_context()</code> — 上下文条目</li>
+                <li>三路使用 <code>asyncio.gather()</code> 并行执行</li>
+                <li>MCP 数据源通过 <code>proactive_v2/mcp_sources.py</code> 的 <code>McpClientPool</code> 拉取</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="4">
+        <div class="step-header">
+          <span class="step-num">4</span>
+          <span class="step-title">Drift 降级</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>三条线都查完了，没有新消息。普通人可能会说"那就算了"，但小琛不会闲着——他会切换到"自主工作模式"，自己去找有意义的事做。这就是为什么他会主动找你分享有趣的东西。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">无 alerts</span>
+              <span class="flow-arrow">+</span>
+              <span class="flow-node">无 content</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">drift_enabled?</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">进入 DriftRunner</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">关键降级逻辑</div>
+              <ul>
+                <li><code>agent_tick.py:640-670</code> — 当 gateway 结果全空时</li>
+                <li>不是直接 skip，而是检查 <code>drift_enabled</code> 配置</li>
+                <li>config.toml: <code>[proactive.drift] enabled = true</code></li>
+                <li>这是小琛主动找你的实际路径 — Drift 模式一直在工作</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">无 alerts</span>
+              <span class="flow-arrow">+</span>
+              <span class="flow-node">无 content</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">drift_enabled?</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">进入 DriftRunner</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">降级路径代码</div>
+              <ul>
+                <li><code>proactive_v2/agent_tick.py:640-670</code> — <code>_run_loop()</code> 中的快速 skip 判断</li>
+                <li><code>if not gw_result.alerts and not gw_result.content_meta and not context_as_fallback_open:</code></li>
+                <li>→ 检查 <code>self._drift_enabled</code>（来自 config.toml <code>[proactive.drift] enabled = true</code>）</li>
+                <li>→ 进入 <code>self._drift_runner.run(ctx, self._llm_fn)</code></li>
+                <li>如果 drift 也未启用 → <code>skip("no_content")</code></li>
+                <li>Drift 是小琛主动找你的实际路径 — 从 4月28日到5月6日持续活跃运行</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="5">
+        <div class="step-header">
+          <span class="step-num">5</span>
+          <span class="step-title">技能执行</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>小琛翻开自己的"技能手册"，找到一个叫"AI前沿监控"的技能：去几个知名AI博客和论坛扫一圈，看看有什么新鲜事。就像你早上起来刷一下朋友圈和微博。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">DriftRunner.run()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">scan_skills()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">ai-frontier-watch</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">web_fetch RSS</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">ai-frontier-watch 技能</div>
+              <ul>
+                <li>信息源：Simon Willison / Latent Space / Anthropic RSS / HN / HuggingFace Papers</li>
+                <li>行为：拉 RSS → 挑有趣内容 → 读原文 → 写笔记/推送</li>
+                <li>已运行32次（截至2026-05-06），产出17+篇笔记</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">DriftRunner.run()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">scan_skills()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">ai-frontier-watch</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">web_fetch RSS</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">DriftRunner + ai-frontier-watch</div>
+              <ul>
+                <li><code>proactive_v2/drift_runner.py</code> — <code>DriftRunner.run(ctx, llm_fn)</code></li>
+                <li><code>proactive_v2/drift_state.py</code> — <code>DriftStateStore.scan_skills()</code> 扫描 <code>~/.akashic/workspace/drift/skills/</code></li>
+                <li><code>~/.akashic/workspace/drift/skills/ai-frontier-watch/SKILL.md</code> — 技能定义</li>
+                <li>信息源：Simon Willison / Latent Space / Anthropic RSS / HN / HuggingFace Papers（7个RSS源经RSSHub）</li>
+                <li>已运行32次，产出17+篇笔记到 <code>workspace/drift/notes/ai-YYYY-MM-DD-N.md</code></li>
+                <li>config.toml: <code>[proactive.drift] max_steps=20, min_interval_hours=3</code></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="6">
+        <div class="step-header">
+          <span class="step-num">6</span>
+          <span class="step-title">主动触达</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>看到有意思的东西，小琛会做两件事：①把笔记整理好存起来（写到本地文件）；②通过飞书给你发一条消息，分享他发现的好东西。就像朋友看到好文章转发给你一样。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">write_file 写笔记</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">message_push</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">飞书消息推送给你</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">实际触发记录</div>
+              <ul>
+                <li>05-06 11:42 — 回顾 Dreamova 专题 + Anthropic & OpenAI 布局笔记</li>
+                <li>05-05 16:31 — 推送了 DeepSeek V4 Pro KV cache 观点</li>
+                <li>05-05 13:28 — 写了 Hermes Agent Kanban 笔记</li>
+                <li>05-03 16:08 — 刷了 OpenAI AgentKit 并写笔记推给你</li>
+                <li>05-03 13:04 — 推算 CP32 已结束，主动发消息问候</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">write_file 写笔记</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">message_push</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">飞书消息推送给你</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">输出路径</div>
+              <ul>
+                <li><code>proactive_v2/drift_tools.py</code> — <code>DriftWriteFileTool</code> 写入 <code>workspace/drift/notes/</code></li>
+                <li><code>proactive_v2/drift_tools.py</code> — <code>SendMessageTool</code>（message_push）通过 <code>send_message_fn</code> 发飞书</li>
+                <li>目标：<code>config.toml [proactive.target] channel="feishu", chat_id="ou_f3830b1cd53a2815c2422d89a3737bca"</code></li>
+                <li>Drift 限制：message_push 最多调用1次，防止刷屏</li>
+                <li>实际触发记录（drift.json recent_runs）：从4月28日到5月6日持续活跃</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ========== Section 3: Drift Pipeline ========== -->
+<section id="drift" class="drift-theme">
+  <h2 class="section-title">
+    Drift 自主漂移流水线
+    <span class="badge">闲时自主干活</span>
+  </h2>
+  <p class="section-desc">没有外部数据推送时，小琛自主选择技能执行有意义的事 — 可以挂载MCP工具，自主决定写入飞书知识库</p>
+
+  <div class="steps-container" data-pipeline="drift">
+
+    <div class="step-wrapper">
+      <div class="step-card active" data-step="1">
+        <div class="step-header">
+          <span class="step-num">1</span>
+          <span class="step-title">触发条件</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>当小琛发现"外面没什么新鲜事"，而且距离上次自主工作已经过了至少3小时，他就会进入"自主漂移"模式——自己决定去做点有意义的事。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">Gateway 结果全空</span>
+              <span class="flow-arrow">+</span>
+              <span class="flow-node">drift 间隔满足 ≥3h</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">进入 DriftRunner</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">配置</div>
+              <ul>
+                <li><code>[proactive.drift] enabled = true</code></li>
+                <li><code>max_steps = 20</code> — 最多执行20步工具调用</li>
+                <li><code>min_interval_hours = 3</code> — 两次 Drift 间隔至少3小时</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">Gateway 结果全空</span>
+              <span class="flow-arrow">+</span>
+              <span class="flow-node">drift 间隔满足 ≥3h</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">进入 DriftRunner</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">触发条件代码</div>
+              <ul>
+                <li><code>proactive_v2/agent_tick.py:640</code> — <code>if not alerts and not content_meta and not context_fallback:</code></li>
+                <li><code>proactive_v2/drift_state.py</code> — 检查 <code>drift.json</code> 中的 <code>last_run_at</code> 间隔</li>
+                <li>config.toml: <code>[proactive.drift] enabled=true, max_steps=20, min_interval_hours=3</code></li>
+                <li>满足条件 → <code>self._drift_runner.run(ctx, self._llm_fn)</code></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="2">
+        <div class="step-header">
+          <span class="step-num">2</span>
+          <span class="step-title">技能发现</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>小琛打开自己的"技能手册"，看看有哪些可用的技能。每个技能就像一个任务卡，写着"这个技能是干什么的"、"需要什么条件才能用"。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">DriftStateStore.scan_skills()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">扫描 drift/skills/</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">解析 SKILL.md</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">SkillMeta 数据结构</div>
+              <ul>
+                <li><code>name</code> / <code>description</code> / <code>requires_mcp</code></li>
+                <li><code>last_run_at</code> / <code>run_count</code> / <code>status</code></li>
+                <li>当前已有：<code>ai-frontier-watch</code>（AI前沿信息监控）</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">DriftStateStore.scan_skills()</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">扫描 drift/skills/</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">解析 SKILL.md</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">SkillMeta + DriftStateStore</div>
+              <ul>
+                <li><code>proactive_v2/drift_state.py</code> — <code>DriftStateStore.scan_skills()</code></li>
+                <li>扫描路径：<code>~/.akashic/workspace/drift/skills/</code> + builtin skills 目录</li>
+                <li>解析 SKILL.md 的 YAML frontmatter：<code>name</code>, <code>description</code>, <code>requires_mcp</code></li>
+                <li><code>SkillMeta</code> dataclass：<code>last_run_at</code>, <code>run_count</code>, <code>status</code>, <code>next</code>, <code>requires_mcp</code>, <code>builtin</code></li>
+                <li>运行状态持久化到 <code>~/.akashic/workspace/drift/drift.json</code></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="3">
+        <div class="step-header">
+          <span class="step-num">3</span>
+          <span class="step-title">MCP 过滤</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>有些技能需要特定的"外部工具"才能用（比如需要连接飞书或GitHub）。小琛会检查哪些工具是现成可用的，用不了的技能就先跳过。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">检查 requires_mcp</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">对比已连接 MCP servers</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">过滤不可用 skill</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">过滤逻辑</div>
+              <ul>
+                <li><code>connected_servers = shared.get_mcp_server_names()</code></li>
+                <li>如果 skill 的 <code>requires_mcp</code> 声明了需要某 MCP server 但未连接 → 跳过</li>
+                <li>已连接的 MCP：lark（飞书）、github</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">检查 requires_mcp</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">对比已连接 MCP servers</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">过滤不可用 skill</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">MCP 过滤代码</div>
+              <ul>
+                <li><code>proactive_v2/drift_runner.py:46-55</code></li>
+                <li><code>connected_servers = shared.get_mcp_server_names() if shared else set()</code></li>
+                <li><code>skills = [s for s in skills if not s.requires_mcp or set(s.requires_mcp) <= connected_servers]</code></li>
+                <li>已连接 MCP servers 配置在 <code>~/.akashic/workspace/mcp_servers.json</code></li>
+                <li>当前已连接：lark（<code>@larksuiteoapi/lark-mcp</code>）、github（<code>@modelcontextprotocol/server-github</code>）</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="4">
+        <div class="step-header">
+          <span class="step-num">4</span>
+          <span class="step-title">系统提示构建</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>开始工作前，小琛先"回忆"一下：我是谁、有哪些技能可以用、最近发生了什么、上次做这个任务时做了什么。把这些信息都装进脑子里，然后开始干活。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">_build_system_prompt()</span>
+            </div>
+            <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">
+              <span class="flow-node">长期记忆</span>
+              <span class="flow-node">可用技能列表</span>
+              <span class="flow-node">近期上下文</span>
+              <span class="flow-node">历史运行记录</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">注入内容</div>
+              <ul>
+                <li>从 shared_tools 的 recall_memory 获取长期记忆摘要</li>
+                <li>所有可用 skill 的 name + description 列表</li>
+                <li>最近的对话上下文（recent_context）</li>
+                <li>该 skill 的历史运行记录（drift.json 中的 recent_runs）</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">_build_system_prompt()</span>
+            </div>
+            <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">
+              <span class="flow-node">长期记忆</span>
+              <span class="flow-node">可用技能列表</span>
+              <span class="flow-node">近期上下文</span>
+              <span class="flow-node">历史运行记录</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">System Prompt 组装</div>
+              <ul>
+                <li><code>proactive_v2/drift_runner.py</code> — <code>_build_system_prompt()</code></li>
+                <li>注入长期记忆：<code>shared.execute("recall_memory", ...)</code> 获取摘要</li>
+                <li>注入可用技能列表：所有 skill 的 <code>name</code> + <code>description</code></li>
+                <li>注入近期上下文：<code>recent_context</code>（最近几轮对话摘要）</li>
+                <li>注入历史记录：<code>drift.json</code> 中该 skill 的 <code>recent_runs</code></li>
+                <li>LLM 基于此 prompt 自主选择工具执行</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="5">
+        <div class="step-header">
+          <span class="step-num">5</span>
+          <span class="step-title">工具循环</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>小琛开始工作：先去RSS源（像订阅的报纸）看看最新文章，挑出有意思的，再点进去读完整内容。整个过程最多20步，每一步都是他自己决定"接下来做什么"。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">LLM 选工具</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">web_fetch RSS</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">挑选有趣文章</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">web_fetch 原文</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">可用工具</div>
+              <ul>
+                <li>本地工具：<code>read_file</code> / <code>write_file</code> / <code>edit_file</code></li>
+                <li>共享工具：<code>web_fetch</code> / <code>web_search</code> / <code>recall_memory</code> / <code>shell</code></li>
+                <li>MCP挂载工具：<code>mount_server</code> → 动态加载任一MCP server的所有工具</li>
+                <li>通讯工具：<code>message_push</code>（最多1条） / <code>finish_drift</code></li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">LLM 选工具</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">web_fetch RSS</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">挑选有趣文章</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">web_fetch 原文</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">DriftRunner tool loop</div>
+              <ul>
+                <li><code>proactive_v2/drift_runner.py:84-155</code> — 主循环 max_steps=20</li>
+                <li>每步：<code>schemas</code> 发给 LLM → 获取 <code>tool_call</code> → 分发执行</li>
+                <li>双路分发：本地工具走 <code>tools.execute()</code>，MCP工具走 <code>shared.execute()</code></li>
+                <li><code>proactive_v2/drift_tools.py</code> — <code>build_drift_tool_registry()</code> 注册本地+共享工具</li>
+                <li>DriftWebFetchTool 包装了 web_fetch 做字符截断（防止 context 爆掉）</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card decision-point" data-step="6">
+        <div class="step-header">
+          <span class="step-num">6</span>
+          <span class="step-title">自主决策点</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>读完文章后，小琛会自己判断："这篇文章值不值得深究？应该怎么处理？"他不是按固定脚本走的——可以决定只是简单记个笔记，也可以决定"这篇太好了，我要写进正式的知识库"。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">LLM 判断文章价值</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">决定输出方式</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">这是整个架构中最关键的设计</div>
+              <ul>
+                <li>LLM 不是按固定脚本执行，而是<strong>自主判断</strong>文章的价值和合适的输出方式</li>
+                <li>可以决定只写本地笔记，也可以决定挂载 Lark MCP 写入飞书知识库</li>
+                <li><code>mount_server("lark")</code> — 将飞书MCP工具注入当前Drift会话</li>
+                <li>注入后可调用 <code>mcp_lark__bitable_v1_appTableRecord_create</code> 等飞书API</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">LLM 判断文章价值</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">决定输出方式</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">mount_server 动态 MCP 挂载</div>
+              <ul>
+                <li><code>proactive_v2/drift_tools.py</code> — <code>MountServerTool.execute(server)</code></li>
+                <li>调用 <code>shared.get_tool_names_by_source("mcp", server)</code> 获取该 server 的所有工具名</li>
+                <li>加入 <code>mounted_tool_names</code> 集合</li>
+                <li><code>drift_runner.py:84-85</code>：已挂载的 MCP 工具 schema 拼接到发给 LLM 的 schemas 列表</li>
+                <li><code>drift_runner.py:149-155</code>：工具执行时双路分发 — MCP 工具走 <code>shared.execute()</code></li>
+                <li>这意味着 LLM 可以在 Drift 中自主决定调用任何已连接 MCP server 的任何工具</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="7">
+        <div class="step-header">
+          <span class="step-num">7</span>
+          <span class="step-title">知识库写入</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>小琛决定怎么处理这篇文章。两条路：①简单记个本地笔记（像便利贴）；②连上飞书的"工具箱"，把文章正式写入飞书知识库——自动分类、打标签、写上自己的理解和概括（像图书馆的编目员）。</p>
+          </div>
+          <div class="level-current">
+            <div class="path-split">
+              <div class="path-option">
+                <div class="path-label">路径 A — 本地笔记</div>
+                <div class="path-flow">
+                  <code>write_file</code><br>
+                  → workspace/drift/notes/ai-YYYY-MM-DD-N.md<br>
+                  含小琛自己的理解和概括
+                </div>
+              </div>
+              <div class="path-option">
+                <div class="path-label">路径 B — 飞书知识库</div>
+                <div class="path-flow">
+                  <code>mount_server("lark")</code><br>
+                  → <code>mcp_lark__bitable_v1_appTableRecord_create</code><br>
+                  → 飞书多维表格（打标签 + 小琛摘要）
+                </div>
+              </div>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">飞书知识库字段结构</div>
+              <ul>
+                <li><code>标题</code> — 仓库/文章标题</li>
+                <li><code>类型</code> — 工具/论文/博客/其他</li>
+                <li><code>主题标签</code> — 多选标签</li>
+                <li><code>URL</code> — 链接</li>
+                <li><code>小琛摘要</code> — 带技术要点和 trade-off 分析</li>
+                <li><code>整理时间</code> — 毫秒时间戳</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="path-split">
+              <div class="path-option">
+                <div class="path-label">路径 A — 本地笔记</div>
+                <div class="path-flow">
+                  <code>write_file</code><br>
+                  → workspace/drift/notes/ai-YYYY-MM-DD-N.md<br>
+                  含小琛自己的理解和概括
+                </div>
+              </div>
+              <div class="path-option">
+                <div class="path-label">路径 B — 飞书知识库</div>
+                <div class="path-flow">
+                  <code>mount_server("lark")</code><br>
+                  → <code>mcp_lark__bitable_v1_appTableRecord_create</code><br>
+                  → 飞书多维表格（打标签 + 小琛摘要）
+                </div>
+              </div>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">MCP 工具调用链</div>
+              <ul>
+                <li>路径A：<code>proactive_v2/drift_tools.py</code> — <code>DriftWriteFileTool.execute(path, content)</code></li>
+                <li>路径B：LLM 先调 <code>mount_server("lark")</code> → <code>MountServerTool</code> 注入所有 lark MCP 工具</li>
+                <li>然后调 <code>mcp_lark__bitable_v1_appTableRecord_create</code></li>
+                <li>参数：<code>app_token=VlwcbCcEYaLbdJsN4XLcr9VHnJg</code>, <code>table_id=tblsDO8V9VBmAzCe</code></li>
+                <li>字段：标题 / 类型 / 主题标签(multi-select) / URL(link object) / 小琛摘要 / 整理时间(ms) / 状态</li>
+                <li>底层：McpClient → stdio JSON-RPC → <code>@larksuiteoapi/lark-mcp</code> → 飞书 API</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="next-btn" onclick="nextStep(this, event)">下一步 →</button>
+      </div>
+    </div>
+
+    <div class="step-wrapper">
+      <div class="step-card" data-step="8">
+        <div class="step-header">
+          <span class="step-num">8</span>
+          <span class="step-title">飞书触达 + 收尾</span>
+        </div>
+        <div class="step-body">
+          <div class="level-simple">
+            <p>工作完成！小琛可以选择给你发一条飞书消息分享成果（但最多一条，不会刷屏）。然后保存这次工作的记录，下次就知道自己做过什么了。最后有个安全机制：最多20步就会强制停下来，防止无限循环。</p>
+          </div>
+          <div class="level-current">
+            <div class="flow">
+              <span class="flow-node">message_push（可选，最多1条）</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">飞书消息推送给你</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">finish_drift</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">保存 skill 状态</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">强制着陆机制</div>
+              <ul>
+                <li>step N-3 → 注入警告："即将到达步数上限"</li>
+                <li>step N-2 → 限制为 write_file/edit_file only</li>
+                <li>step N-1 → 强制 finish_drift，保存当前状态</li>
+                <li>防止 Drift 无限循环，确保每次运行都有明确产出</li>
+              </ul>
+            </div>
+          </div>
+          <div class="level-tech">
+            <div class="flow">
+              <span class="flow-node">message_push（可选，最多1条）</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">飞书消息推送给你</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">finish_drift</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-node">保存 skill 状态</span>
+            </div>
+            <div class="particle-track"><div class="particle"></div></div>
+            <div class="detail">
+              <div class="detail-title">强制着陆 + 状态持久化</div>
+              <ul>
+                <li><code>proactive_v2/drift_runner.py</code> — 强制着陆三步渐进机制</li>
+                <li>step N-3 → 注入 system warning："即将到达步数上限"</li>
+                <li>step N-2 → schemas 限制为 write_file/edit_file only</li>
+                <li>step N-1 → 强制注入 <code>finish_drift</code> tool call</li>
+                <li><code>FinishDriftTool.execute()</code> → 保存 skill 状态到 <code>drift.json</code></li>
+                <li><code>SendMessageTool.execute()</code> → 通过 <code>send_message_fn</code> 发飞书消息（最多1次）</li>
+                <li>drift.json 更新：<code>last_run_at</code>, <code>run_count++</code>, <code>recent_runs</code> 追加记录</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ========== Section 4: Infrastructure ========== -->
+<section id="infra">
+  <h2 class="section-title" style="color:var(--text-bright);">
+    共享基础设施
+  </h2>
+  <p class="section-desc">三条流水线共享的底层能力</p>
+
+  <div class="infra-grid">
+    <div class="infra-card">
+      <div class="card-title">
+        <span class="dot" style="background:var(--teal);"></span>
+        记忆系统
+      </div>
+      <div class="card-body">
+        <div class="layer-stack">
+          <div class="layer-item"><span class="l-name">L1 硬编码</span><span class="l-desc">PERSONALITY_RULES — 每轮必注入，不可热加载</span></div>
+          <div class="layer-item"><span class="l-name">L2 自我认知</span><span class="l-desc">SELF.md — agent 可通过 read_file 主动读写</span></div>
+          <div class="layer-item"><span class="l-name">L3 向量记忆</span><span class="l-desc">memory2.db — sqlite-vec 1024维，4种记忆类型</span></div>
+          <div class="layer-item"><span class="l-name">L4 会话历史</span><span class="l-desc">sessions.db — 最近N轮对话直接注入</span></div>
+          <div class="layer-item"><span class="l-name">L5 引用协议</span><span class="l-desc">§cited:[]§ — 每句话可追溯到记忆来源</span></div>
+          <div class="layer-item"><span class="l-name">L6 元记忆</span><span class="l-desc">supersede 替换追踪 — 旧记忆标记而非删除</span></div>
+        </div>
+        <div style="margin-top:12px;font-size:11px;color:var(--text-dim);">
+          检索管线：QueryRewriter → HyDE增强 → 向量+关键词混合 → SufficiencyChecker → 1200字预算注入
+        </div>
+      </div>
+    </div>
+
+    <div class="infra-card">
+      <div class="card-title">
+        <span class="dot" style="background:var(--amber);"></span>
+        工具系统
+      </div>
+      <div class="card-body">
+        <div style="margin-bottom:8px;font-size:11px;font-weight:600;color:var(--text);">常驻工具 (always_on)</div>
+        <div>
+          <span class="tool-tag">web_fetch</span>
+          <span class="tool-tag">web_search</span>
+          <span class="tool-tag">read_image_vision</span>
+          <span class="tool-tag">recall_memory</span>
+          <span class="tool-tag">memorize</span>
+          <span class="tool-tag">forget_memory</span>
+          <span class="tool-tag">shell</span>
+        </div>
+        <div style="margin:8px 0;font-size:11px;font-weight:600;color:var(--text);">延迟加载工具 (deferred)</div>
+        <div>
+          <span class="tool-tag">spawn / spawn_manage</span>
+          <span class="tool-tag">schedule</span>
+          <span class="tool-tag">write_file / edit_file</span>
+          <span class="tool-tag">message_push</span>
+          <span class="tool-tag">fetch_messages</span>
+        </div>
+        <div style="margin:8px 0;font-size:11px;font-weight:600;color:var(--text);">MCP 动态挂载</div>
+        <div>
+          <span class="tool-tag">mount_server</span>
+          <span class="tool-tag">tool_search</span>
+          <span class="tool-tag">mcp_lark__*</span>
+          <span class="tool-tag">mcp_github__*</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="infra-card">
+      <div class="card-title">
+        <span class="dot" style="background:var(--pink);"></span>
+        模型策略
+      </div>
+      <div class="card-body">
+        <div class="layer-stack">
+          <div class="layer-item"><span class="l-name">DeepSeek-V4-Flash</span><span class="l-desc">主推理 + 工具调用，reasoning_content/thinking模式</span></div>
+          <div class="layer-item"><span class="l-name">Qwen-Flash</span><span class="l-desc">轻量任务（记忆检索/改写），低延迟低成本</span></div>
+          <div class="layer-item"><span class="l-name">Qwen-VL-Plus</span><span class="l-desc">视觉理解，多模态图像输入（路线B：按需调用）</span></div>
+          <div class="layer-item"><span class="l-name">text-embedding-v3</span><span class="l-desc">语义向量，1024维 / DashScope</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="infra-card">
+      <div class="card-title">
+        <span class="dot" style="background:var(--purple);"></span>
+        MCP 协议
+      </div>
+      <div class="card-body">
+        <div class="layer-stack">
+          <div class="layer-item"><span class="l-name">Lark MCP</span><span class="l-desc">@larksuiteoapi/lark-mcp — 飞书API工具化（多维表格/消息/文档）</span></div>
+          <div class="layer-item"><span class="l-name">GitHub MCP</span><span class="l-desc">@modelcontextprotocol/server-github — 仓库搜索/PR管理</span></div>
+          <div class="layer-item"><span class="l-name">通信协议</span><span class="l-desc">stdio JSON-RPC — McpClient ↔ MCP Server</span></div>
+          <div class="layer-item"><span class="l-name">工具命名</span><span class="l-desc">mcp_{server}__{tool} — 统一注册到 ToolRegistry</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div style="height:80px;"></div>
+
+<!-- ========== JavaScript ========== -->
+<script>
+// === Level Toggle ===
+function setLevel(level) {
+  document.querySelectorAll('.level-simple').forEach(el => el.style.display = (level === 'simple') ? 'block' : 'none');
+  document.querySelectorAll('.level-current').forEach(el => el.style.display = (level === 'current') ? 'block' : 'none');
+  document.querySelectorAll('.level-tech').forEach(el => el.style.display = (level === 'tech') ? 'block' : 'none');
+  document.querySelectorAll('.level-toggle button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.level === level);
+  });
+}
+// Default level on load
+setLevel('current');
+
+// === Step Progression (fixed: stopPropagation to prevent done-card handler) ===
+function nextStep(btn, e) {
+  if (e) e.stopPropagation();
+  const currentCard = btn.closest('.step-card');
+  const currentWrapper = currentCard.closest('.step-wrapper');
+  const nextWrapper = currentWrapper.nextElementSibling;
+
+  if (!nextWrapper) return;
+
+  // Mark current as done
+  currentCard.classList.remove('active');
+  currentCard.classList.add('done');
+  btn.style.display = 'none';
+
+  // Activate next
+  const nextCard = nextWrapper.querySelector('.step-card');
+  nextCard.classList.add('active');
+
+  // Scroll to next
+  setTimeout(() => {
+    nextCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 200);
+}
+
+// === Click on done step to re-activate (exclude next-btn clicks) ===
+document.addEventListener('click', (e) => {
+  // Don't handle if clicking next-btn (handled by nextStep)
+  if (e.target.closest('.next-btn')) return;
+
+  const card = e.target.closest('.step-card.done');
+  if (!card) return;
+
+  const container = card.closest('.steps-container');
+  const allCards = container.querySelectorAll('.step-card');
+
+  // Reset all cards in this pipeline
+  allCards.forEach(c => {
+    c.classList.remove('active', 'done');
+    const btn = c.querySelector('.next-btn');
+    if (btn) btn.style.display = '';
+  });
+
+  // Activate clicked and mark all before it as done
+  let found = false;
+  allCards.forEach(c => {
+    if (c === card) {
+      found = true;
+      c.classList.add('active');
+      const btn = c.querySelector('.next-btn');
+      if (btn) btn.style.display = '';
+    } else if (!found) {
+      c.classList.add('done');
+      const btn = c.querySelector('.next-btn');
+      if (btn) btn.style.display = 'none';
+    }
+  });
+});
+
+// === Nav highlighting with IntersectionObserver ===
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('nav a');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      navLinks.forEach(link => {
+        if (link.getAttribute('href')) {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+        }
+      });
+    }
+  });
+}, { rootMargin: '-30% 0px -60% 0px' });
+
+sections.forEach(section => observer.observe(section));
+
+// === Particle animation restart on card becoming visible ===
+const stepObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const particles = entry.target.querySelectorAll('.particle');
+      particles.forEach(p => {
+        p.style.animation = 'none';
+        p.offsetHeight; // trigger reflow
+        p.style.animation = '';
+      });
+    }
+  });
+}, { threshold: 0.5 });
+
+document.querySelectorAll('.step-card').forEach(card => stepObserver.observe(card));
+</script>
+
+</body>
+</html>
